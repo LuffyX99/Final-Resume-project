@@ -91,8 +91,10 @@ export function useAdminAuth(): AdminAuthContextValue {
   if (!context) {
     return {
       admin: null,
-      token: null,
-      signInAdmin: () => {},
+      loading: false,
+      signInAdmin: async () => {
+        throw new Error("useAdminAuth must be used inside AdminAuthProvider");
+      },
       signOutAdmin: () => {},
     };
   }
