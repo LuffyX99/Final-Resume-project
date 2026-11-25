@@ -1,21 +1,35 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getResumes } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import type { Resume } from "../types";
 import DataTable from "../components/DataTable";
 
 const PAGE_SIZE = 20;
 
 export default function ResumesList() {
+  const { user } = useAuth();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const isCandidate = user?.role === "candidate";
+
   useEffect(() => {
-    setLoading(true);
+    let active = true;
     getResumes(page * PAGE_SIZE, PAGE_SIZE)
-      .then(setResumes)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (active) setResumes(data);
+      })
+      .catch(() => {
+        if (active) setResumes([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [page]);
 
   if (loading && page === 0) {
@@ -32,9 +46,13 @@ export default function ResumesList() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-base-50 tracking-tight">
-            Resumes
+            {isCandidate ? "My Resumes" : "Resumes"}
           </h1>
-          <p className="mt-1 text-base-300">Manage candidate resumes</p>
+          <p className="mt-1 text-base-300">
+            {isCandidate
+              ? "Manage your resume submissions"
+              : "Manage candidate resumes"}
+          </p>
         </div>
         <Link
           to="/resumes/new"
@@ -81,7 +99,10 @@ export default function ResumesList() {
         data={resumes}
         keyExtractor={(r) => r.id}
         page={page}
-        onPageChange={setPage}
+        onPageChange={(next) => {
+          setLoading(true);
+          setPage(next);
+        }}
         hasMore={resumes.length === PAGE_SIZE}
       />
     </div>

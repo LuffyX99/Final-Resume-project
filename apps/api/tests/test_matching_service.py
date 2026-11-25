@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.models import Job, Match, Resume
-from app.services.matching import MatchingService
+from app.services.matching import MatchingService, cosine_similarity
 
 
 @pytest.fixture
@@ -32,6 +32,61 @@ def mock_session():
     session.flush = AsyncMock()
     session.execute = AsyncMock()
     return session
+
+
+class TestCosineSimilarity:
+    def test_identical_vectors_score_one(self):
+        assert cosine_similarity([0.1, 0.2, 0.3], [0.1, 0.2, 0.3]) == pytest.approx(1.0)
+
+    def test_orthogonal_vectors_score_zero(self):
+        assert cosine_similarity([1.0, 0.0], [0.0, 1.0]) == 0.0
+
+    def test_invalid_or_zero_vectors_score_zero(self):
+        assert cosine_similarity(None, [1.0]) == 0.0
+        assert cosine_similarity([1.0], [1.0, 2.0]) == 0.0
+        assert cosine_similarity([0.0, 0.0], [1.0, 2.0]) == 0.0
+
+    def test_clamps_negative_similarity(self):
+        assert cosine_similarity([1.0, 0.0], [-1.0, 0.0]) == 0.0
+
+
+class TestScoreApplication:
+    @pytest.mark.asyncio
+    async def test_creates_single_match_for_fresh_application(
+        self, mock_session, job_id, resume_id
+    ):
+        job = MagicMock(spec=Job)
+        job.id = job_id
+        job.embedding = [0.1, 0.2]
+        resume = MagicMock(spec=Resume)
+        resume.id = resume_id
+        resume.embedding = [0.1, 0.2]
+
+        service = MatchingService(mock_session)
+        match = await service.score_application(job, resume)
+
+        assert match is not None
+        assert match.job_id == job_id
+        assert match.resume_id == resume_id
+        assert match.similarity_score == pytest.approx(1.0)
+        assert match.shortlisted is False
+        mock_session.add.assert_called_once_with(match)
+        mock_session.flush.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_skips_match_when_embedding_missing(
+        self, mock_session, job_id, resume_id
+    ):
+        job = MagicMock(spec=Job)
+        job.id = job_id
+        job.embedding = None
+        resume = MagicMock(spec=Resume)
+        resume.id = resume_id
+        resume.embedding = [0.1]
+
+        service = MatchingService(mock_session)
+        assert await service.score_application(job, resume) is None
+        mock_session.add.assert_not_called()
 
 
 class TestComputeMatches:

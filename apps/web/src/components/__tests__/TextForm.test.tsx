@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import type { FieldErrors } from "../../types";
 import TextForm from "../TextForm";
 
 const fields = [
@@ -131,6 +132,57 @@ describe("TextForm", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Create")).toBeInTheDocument();
+    });
+  });
+
+  it("blocks submit and shows inline errors when validation fails", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const emailFields = [
+      { name: "email", label: "Email", type: "email" as const },
+    ];
+
+    render(
+      <TextForm
+        title="Sign In"
+        fields={emailFields}
+        submitLabel="Sign In"
+        validate={() => ({ email: "Email is required." })}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
+    expect(await screen.findByText("Email is required.")).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("clears an inline error when the field changes", async () => {
+    const emailFields = [
+      { name: "email", label: "Email", type: "email" as const },
+    ];
+    const validate = (values: Record<string, string>): FieldErrors =>
+      values.email ? {} : { email: "Email is required." };
+
+    render(
+      <TextForm
+        title="Sign In"
+        fields={emailFields}
+        submitLabel="Sign In"
+        validate={validate}
+        onSubmit={async () => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+    await screen.findByText("Email is required.");
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "jane@example.com" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Email is required.")).not.toBeInTheDocument();
     });
   });
 });

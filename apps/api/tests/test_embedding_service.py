@@ -1,39 +1,23 @@
-"""Unit tests for the EmbeddingService (OpenAI calls are mocked)."""
+"""Unit tests for the EmbeddingService powered by SBERT."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import math
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.services.embedding import EmbeddingService
-
-
-@pytest.fixture
-def fake_openai_response():
-    """Helper to create a mock OpenAI embeddings response."""
-
-    def _make(embedding: list[float]):
-        data_item = MagicMock()
-        data_item.embedding = embedding
-        response = MagicMock()
-        response.data = [data_item]
-        return response
-
-    return _make
+from app.services.embedding import EMBEDDING_DIMENSION, EmbeddingService
 
 
 @pytest.fixture
 def service():
-    with patch("app.services.embedding.settings") as mock_settings:
-        mock_settings.openai_api_key = "test-key"
-        svc = EmbeddingService()
-        yield svc
+    return EmbeddingService()
 
 
 class TestTokenCount:
     def test_counts_tokens(self, service):
         count = service._token_count("hello world")
         assert isinstance(count, int)
-        assert count > 0
+        assert count == 2
 
     def test_empty_string(self, service):
         count = service._token_count("")
@@ -47,23 +31,20 @@ class TestChunkText:
         assert chunks[0] == "short text"
 
     def test_long_text_returns_multiple_chunks(self, service):
-        # Create text that exceeds the token limit
-        long_text = "word " * 20000
+        # Create text that exceeds the SBERT chunk limit
+        long_text = "word " * 500
         chunks = service._chunk_text(long_text)
         assert len(chunks) > 1
 
 
 class TestGetEmbedding:
     @pytest.mark.asyncio
-    async def test_single_chunk_embedding(self, service, fake_openai_response):
-        expected = [0.1] * 1536
-        service.client.embeddings.create = AsyncMock(
-            return_value=fake_openai_response(expected)
-        )
-
-        result = await service.get_embedding("short text")
-        assert result == expected
-        service.client.embeddings.create.assert_awaited_once()
+    async def test_single_chunk_embedding(self, service):
+        result = await service.get_embedding("Python backend engineer")
+        assert len(result) == EMBEDDING_DIMENSION
+        assert EMBEDDING_DIMENSION == 384
+        mag = math.sqrt(sum(v * v for v in result))
+        assert abs(mag - 1.0) < 1e-4
 
     @pytest.mark.asyncio
     async def test_empty_text_raises_error(self, service):
@@ -76,24 +57,12 @@ class TestGetEmbedding:
             await service.get_embedding("   ")
 
     @pytest.mark.asyncio
-    async def test_multi_chunk_embedding(self, service, fake_openai_response):
-        emb1 = [1.0] * 4
-        emb2 = [3.0] * 4
-
-        service.client.embeddings.create = AsyncMock(
-            side_effect=[
-                fake_openai_response(emb1),
-                fake_openai_response(emb2),
-            ]
-        )
-        # Force multiple chunks
-        service._chunk_text = MagicMock(return_value=["chunk1", "chunk2"])
-        service._token_count = MagicMock(side_effect=[5, 5])
-
-        result = await service.get_embedding("some long text")
-        assert len(result) == 4
-        # Weighted average of [1,1,1,1] (weight=5) and [3,3,3,3] (weight=5) = [2,2,2,2]
-        assert all(abs(v - 2.0) < 1e-9 for v in result)
+    async def test_multi_chunk_embedding(self, service):
+        long_text = "software engineer " * 300
+        result = await service.get_embedding(long_text)
+        assert len(result) == EMBEDDING_DIMENSION
+        mag = math.sqrt(sum(v * v for v in result))
+        assert abs(mag - 1.0) < 1e-4
 
 
 class TestWeightedAverage:

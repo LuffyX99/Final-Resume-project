@@ -18,13 +18,22 @@ export default function ResumeDetail() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
+    let active = true;
     Promise.all([getResume(id), getResumeMatches(id)])
       .then(([r, m]) => {
+        if (!active) return;
         setResume(r);
         setMatches(m);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        // The page keeps its existing not-found state on a failed read.
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   async function handleCompute() {

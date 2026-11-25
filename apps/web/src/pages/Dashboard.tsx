@@ -4,7 +4,17 @@ import { getJobs, getResumes, getMatches } from "../api/client";
 import type { Match } from "../types";
 import ScoreBadge from "../components/ScoreBadge";
 
-export default function Dashboard() {
+export default function Dashboard({
+  title = "Dashboard",
+  subtitle = "AI-powered resume matching at a glance",
+  canAddJob = true,
+  canAddResume = true,
+}: {
+  title?: string;
+  subtitle?: string;
+  canAddJob?: boolean;
+  canAddResume?: boolean;
+}) {
   const [jobCount, setJobCount] = useState(0);
   const [resumeCount, setResumeCount] = useState(0);
   const [recentMatches, setRecentMatches] = useState<Match[]>([]);
@@ -83,11 +93,9 @@ export default function Dashboard() {
       {/* Hero */}
       <div className="mb-10">
         <h1 className="font-display text-4xl font-bold text-base-50 tracking-tight">
-          Dashboard
+          {title}
         </h1>
-        <p className="mt-2 text-base-300 text-lg">
-          AI-powered resume matching at a glance
-        </p>
+        <p className="mt-2 text-base-300 text-lg">{subtitle}</p>
       </div>
 
       {/* Stats Grid */}
@@ -117,18 +125,22 @@ export default function Dashboard() {
           Recent Matches
         </h2>
         <div className="flex gap-3">
-          <Link
-            to="/jobs/new"
-            className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-100 hover:bg-base-700 hover:border-base-500 transition-all duration-200"
-          >
-            Add Job
-          </Link>
-          <Link
-            to="/resumes/new"
-            className="rounded-lg bg-neon px-4 py-2 text-sm font-semibold text-base-950 hover:bg-neon-dim transition-all duration-200 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
-          >
-            Add Resume
-          </Link>
+          {canAddJob && (
+            <Link
+              to="/jobs/new"
+              className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-100 hover:bg-base-700 hover:border-base-500 transition-all duration-200"
+            >
+              Add Job
+            </Link>
+          )}
+          {canAddResume && (
+            <Link
+              to="/resumes/new"
+              className="rounded-lg bg-neon px-4 py-2 text-sm font-semibold text-base-950 hover:bg-neon-dim transition-all duration-200 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+            >
+              Add Resume
+            </Link>
+          )}
         </div>
       </div>
 

@@ -1,0 +1,21 @@
+npm notice run web@0.0.0 dev
+npm notice run vite --host 127.0.0.1 --port 5173
+X [ERROR] Cannot read directory "../../../../../..": Access is denied.
+
+X [ERROR] Could not resolve "C:\\Users\\Chandan Jaiswal\\OneDrive\\Desktop\\sem pro\\ai-resume-matching\\apps\\web\\vite.config.ts"
+
+failed to load config from C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\vite.config.ts
+error when starting dev server:
+Error: Build failed with 2 errors:
+error: Cannot read directory "../../../../../..": Access is denied.
+error: Could not resolve "C:\\Users\\Chandan Jaiswal\\OneDrive\\Desktop\\sem pro\\ai-resume-matching\\apps\\web\\vite.config.ts"
+    at failureErrorWithLog (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:1752:15)
+    at C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:1211:25
+    at runOnEndCallbacks (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:1592:45)
+    at buildResponseToResult (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:1209:7)
+    at C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:1236:16
+    at responseCallbacks.<computed> (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:886:9)
+    at handleIncomingPacket (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:941:12)
+    at Socket.readFromStdout (C:\Users\Chandan Jaiswal\OneDrive\Desktop\sem pro\ai-resume-matching\apps\web\node_modules\esbuild\lib\main.js:864:7)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)

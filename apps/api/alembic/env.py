@@ -1,5 +1,9 @@
 import asyncio
+import sys
 from logging.config import fileConfig
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from alembic import context
 from sqlalchemy import pool
@@ -7,7 +11,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
 from app.database import Base
-from app.models import Job, Match, Resume  # noqa: F401
+from app.models import (  # noqa: F401
+    Job,
+    Match,
+    RecruiterProfile,
+    Resume,
+    User,
+)
 
 config = context.config
 

@@ -1,12 +1,93 @@
-from app.schemas.job import JobCreate, JobResponse
-from app.schemas.match import MatchComputeRequest, MatchResponse
+from app.schemas.application import (
+    ApplicationResponse,
+    ApplicationResumeSummary,
+    LearningStepResponse,
+    ShortlistOverrideRequest,
+    SkillGapResponse,
+)
+from app.schemas.auth import (
+    CandidateRegister,
+    LoginRequest,
+    RecruiterRegister,
+    SendOTPRequest,
+    SendOTPResponse,
+    TokenResponse,
+    UserResponse,
+    VerifyOTPRequest,
+    VerifyOTPResponse,
+)
+from app.schemas.job import JobCreate, JobResponse, JobUpdate
+from app.schemas.match import (
+    ApplicationDetailResponse,
+    MatchComputeRequest,
+    MatchResponse,
+    MatchUpdate,
+)
+from app.schemas.admin import (
+    AdminApplicationItem,
+    AdminApplicationsListResponse,
+    AdminJobItem,
+    AdminJobsListResponse,
+    AdminMetricsResponse,
+    AdminUserItem,
+    AdminUsersListResponse,
+    JobTakedownRequest,
+    UserStatusUpdate,
+)
+from app.schemas.notification import (
+    InterviewInviteRequest,
+    NotificationListResponse,
+    NotificationResponse,
+)
 from app.schemas.resume import ResumeCreate, ResumeResponse
+from app.schemas.support import (
+    SupportMessageCreate,
+    SupportMessageResponse,
+    SupportThreadCreate,
+    SupportThreadListResponse,
+    SupportThreadResponse,
+    SupportThreadStatusUpdate,
+)
 
 __all__ = [
     "JobCreate",
+    "JobUpdate",
     "JobResponse",
     "ResumeCreate",
     "ResumeResponse",
     "MatchResponse",
+    "MatchUpdate",
     "MatchComputeRequest",
+    "ApplicationDetailResponse",
+    "ApplicationResponse",
+    "ApplicationResumeSummary",
+    "SkillGapResponse",
+    "LearningStepResponse",
+    "CandidateRegister",
+    "RecruiterRegister",
+    "SendOTPRequest",
+    "SendOTPResponse",
+    "VerifyOTPRequest",
+    "VerifyOTPResponse",
+    "LoginRequest",
+    "TokenResponse",
+    "UserResponse",
+    "InterviewInviteRequest",
+    "NotificationResponse",
+    "NotificationListResponse",
+    "AdminMetricsResponse",
+    "AdminUserItem",
+    "AdminUsersListResponse",
+    "UserStatusUpdate",
+    "JobTakedownRequest",
+    "AdminJobItem",
+    "AdminJobsListResponse",
+    "AdminApplicationItem",
+    "AdminApplicationsListResponse",
+    "SupportThreadCreate",
+    "SupportMessageCreate",
+    "SupportThreadStatusUpdate",
+    "SupportMessageResponse",
+    "SupportThreadResponse",
+    "SupportThreadListResponse",
 ]

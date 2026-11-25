@@ -2,6 +2,7 @@ interface Column<T> {
   key: string;
   header: string;
   render: (item: T) => React.ReactNode;
+  cellClassName?: string;
 }
 
 interface DataTableProps<T> {
@@ -11,6 +12,10 @@ interface DataTableProps<T> {
   page: number;
   onPageChange: (page: number) => void;
   hasMore: boolean;
+  emptyMessage?: string;
+  rowClassName?: (item: T) => string;
+  showPagination?: boolean;
+  minPage?: number;
 }
 
 export default function DataTable<T>({
@@ -20,6 +25,10 @@ export default function DataTable<T>({
   page,
   onPageChange,
   hasMore,
+  emptyMessage = "No data found.",
+  rowClassName,
+  showPagination = true,
+  minPage = 0,
 }: DataTableProps<T>) {
   return (
     <div className="animate-fade-in">
@@ -44,19 +53,23 @@ export default function DataTable<T>({
                   colSpan={columns.length}
                   className="px-6 py-12 text-center text-sm text-base-400"
                 >
-                  No data found.
+                  {emptyMessage}
                 </td>
               </tr>
             ) : (
               data.map((item) => (
                 <tr
                   key={keyExtractor(item)}
-                  className="hover:bg-base-700/30 transition-colors duration-150"
+                  className={`hover:bg-base-700/30 transition-colors duration-150 ${
+                    rowClassName?.(item) ?? ""
+                  }`}
                 >
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className="whitespace-nowrap px-6 py-4 text-sm text-base-100"
+                      className={`px-6 py-4 text-sm text-base-100 ${
+                        col.cellClassName ?? "whitespace-nowrap"
+                      }`}
                     >
                       {col.render(item)}
                     </td>
@@ -68,27 +81,30 @@ export default function DataTable<T>({
         </table>
       </div>
 
-      <div className="mt-5 flex items-center justify-between">
-        <p className="text-sm text-base-400 font-mono">
-          {data.length} result{data.length !== 1 && "s"} — page {page + 1}
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page === 0}
-            className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-200 hover:bg-base-700 hover:border-base-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={!hasMore}
-            className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-200 hover:bg-base-700 hover:border-base-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            Next
-          </button>
+      {showPagination && (
+        <div className="mt-5 flex items-center justify-between">
+          <p className="text-sm text-base-400 font-mono">
+            {data.length} result{data.length !== 1 && "s"} — page{" "}
+            {minPage === 1 ? page : page + 1}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onPageChange(Math.max(minPage, page - 1))}
+              disabled={page <= minPage}
+              className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-200 hover:bg-base-700 hover:border-base-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => onPageChange(page + 1)}
+              disabled={!hasMore}
+              className="rounded-lg border border-base-600 bg-base-800 px-4 py-2 text-sm font-medium text-base-200 hover:bg-base-700 hover:border-base-500 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

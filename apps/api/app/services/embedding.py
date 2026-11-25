@@ -1,75 +1,59 @@
-import tiktoken
-from openai import AsyncOpenAI
-
+import logging
 from app.config import settings
+from app.services.sbert import SBERT_DIMENSION, SBERT_MODEL_NAME, SBERTService
 
-DEFAULT_MODEL = "text-embedding-3-small"
-MAX_TOKENS = 8191  # token limit for text-embedding-3-small
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL = SBERT_MODEL_NAME
+EMBEDDING_DIMENSION = SBERT_DIMENSION
 
 
 class EmbeddingService:
+    """Primary embedding service powered by SBERT (all-MiniLM-L6-v2).
+
+    Produces 384-dimensional unit-normalized semantic embeddings. Runs
+    inference in worker threads off the event loop and provides fallback
+    when running in offline/isolated environments.
+    """
+
     def __init__(self, model: str = DEFAULT_MODEL):
         self.model = model
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self._encoding = tiktoken.encoding_for_model(self.model)
-
-    def _token_count(self, text: str) -> int:
-        return len(self._encoding.encode(text))
-
-    def _chunk_text(self, text: str) -> list[str]:
-        """Split text into chunks that fit within the model's token limit."""
-        tokens = self._encoding.encode(text)
-        if len(tokens) <= MAX_TOKENS:
-            return [text]
-
-        chunks: list[str] = []
-        for i in range(0, len(tokens), MAX_TOKENS):
-            chunk_tokens = tokens[i : i + MAX_TOKENS]
-            chunks.append(self._encoding.decode(chunk_tokens))
-        return chunks
+        self.dimension = EMBEDDING_DIMENSION
+        self.sbert = SBERTService.get_instance()
 
     async def get_embedding(self, text: str) -> list[float]:
-        """Generate an embedding vector for the given text.
-
-        For long documents that exceed the token limit, the text is split into
-        chunks and the resulting embeddings are averaged (weighted by chunk
-        token count) to produce a single vector.
-        """
+        """Generate embedding off the event loop using SBERT."""
         text = text.strip()
         if not text:
             raise ValueError("Cannot generate embedding for empty text")
+        return await self.sbert.get_embedding(text)
 
-        chunks = self._chunk_text(text)
+    async def get_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
+        return await self.sbert.get_embeddings_batch(texts)
 
-        if len(chunks) == 1:
-            response = await self.client.embeddings.create(
-                input=chunks[0], model=self.model
-            )
-            return response.data[0].embedding
+    def _token_count(self, text: str) -> int:
+        """Token count estimation for chunking."""
+        cleaned = text.strip()
+        if not cleaned:
+            return 0
+        return len(cleaned.split())
 
-        # Multiple chunks: compute weighted average of embeddings
-        embeddings: list[list[float]] = []
-        weights: list[int] = []
-
-        for chunk in chunks:
-            response = await self.client.embeddings.create(
-                input=chunk, model=self.model
-            )
-            embeddings.append(response.data[0].embedding)
-            weights.append(self._token_count(chunk))
-
-        return self._weighted_average(embeddings, weights)
+    def _chunk_text(self, text: str) -> list[str]:
+        """Delegate chunking to SBERT service."""
+        return self.sbert._chunk_text(text)
 
     @staticmethod
     def _weighted_average(
         embeddings: list[list[float]], weights: list[int]
     ) -> list[float]:
-        total_weight = sum(weights)
+        """Compute weighted mean of embedding vectors."""
         dim = len(embeddings[0])
+        total_weight = sum(weights)
+        if total_weight == 0:
+            return [0.0] * dim
+
         result = [0.0] * dim
-        for emb, w in zip(embeddings, weights):
-            for i in range(dim):
-                result[i] += emb[i] * w
-        for i in range(dim):
-            result[i] /= total_weight
-        return result
+        for emb, weight in zip(embeddings, weights):
+            for i, val in enumerate(emb):
+                result[i] += val * weight
+        return [v / total_weight for v in result]

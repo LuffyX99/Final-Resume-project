@@ -15,81 +15,95 @@ class TestHealthCheck:
 class TestJobsAPI:
     @pytest.mark.asyncio
     async def test_create_job(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        recruiter_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         payload = {
             "title": "Software Engineer",
             "company": "Acme Corp",
             "description": "Build and maintain web applications",
         }
-        resp = await client.post("/api/jobs", json=payload)
+        resp = await client.post("/api/jobs", json=payload, headers=recruiter_headers)
         assert resp.status_code == 201
         data = resp.json()
         assert data["title"] == "Software Engineer"
         assert data["company"] == "Acme Corp"
         assert data["skills"] == ["Python", "FastAPI", "SQL"]
+        assert data["recruiter_id"] is not None
         assert "id" in data
 
     @pytest.mark.asyncio
-    async def test_list_jobs_empty(self, client: AsyncClient):
-        resp = await client.get("/api/jobs")
+    async def test_list_jobs_empty(self, client: AsyncClient, candidate_headers):
+        resp = await client.get("/api/jobs", headers=candidate_headers)
         assert resp.status_code == 200
         assert resp.json() == []
 
     @pytest.mark.asyncio
     async def test_list_jobs_with_data(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        recruiter_headers,
+        candidate_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         await client.post(
             "/api/jobs",
-            json={
-                "title": "Job 1",
-                "company": "Co",
-                "description": "Desc",
-            },
+            json={"title": "Job 1", "company": "Co", "description": "Desc"},
+            headers=recruiter_headers,
         )
-        resp = await client.get("/api/jobs")
+        resp = await client.get("/api/jobs", headers=candidate_headers)
         assert resp.status_code == 200
         assert len(resp.json()) == 1
 
     @pytest.mark.asyncio
     async def test_get_job_by_id(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        recruiter_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         create_resp = await client.post(
             "/api/jobs",
-            json={
-                "title": "Dev",
-                "company": "Co",
-                "description": "Work",
-            },
+            json={"title": "Dev", "company": "Co", "description": "Work"},
+            headers=recruiter_headers,
         )
         job_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/jobs/{job_id}")
+        resp = await client.get(f"/api/jobs/{job_id}", headers=recruiter_headers)
         assert resp.status_code == 200
         assert resp.json()["id"] == job_id
 
     @pytest.mark.asyncio
-    async def test_get_job_not_found(self, client: AsyncClient):
-        resp = await client.get("/api/jobs/00000000-0000-0000-0000-000000000000")
+    async def test_get_job_not_found(self, client: AsyncClient, candidate_headers):
+        resp = await client.get(
+            "/api/jobs/00000000-0000-0000-0000-000000000000",
+            headers=candidate_headers,
+        )
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
     async def test_get_job_matches_empty(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        recruiter_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         create_resp = await client.post(
             "/api/jobs",
-            json={
-                "title": "Dev",
-                "company": "Co",
-                "description": "Work",
-            },
+            json={"title": "Dev", "company": "Co", "description": "Work"},
+            headers=recruiter_headers,
         )
         job_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/jobs/{job_id}/matches")
+        resp = await client.get(
+            f"/api/jobs/{job_id}/matches", headers=recruiter_headers
+        )
         assert resp.status_code == 200
         assert resp.json() == []
 
@@ -97,82 +111,109 @@ class TestJobsAPI:
 class TestResumesAPI:
     @pytest.mark.asyncio
     async def test_create_resume(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        candidate_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         payload = {
             "candidate_name": "John Doe",
             "content": "Experienced Python developer with 5 years of experience",
         }
-        resp = await client.post("/api/resumes", json=payload)
+        resp = await client.post(
+            "/api/resumes", json=payload, headers=candidate_headers
+        )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["candidate_name"] == "John Doe"
+        assert data["candidate_name"] == "Test Person"
+        assert data["candidate_id"] is not None
         assert "id" in data
 
     @pytest.mark.asyncio
-    async def test_list_resumes_empty(self, client: AsyncClient):
-        resp = await client.get("/api/resumes")
+    async def test_list_resumes_empty(self, client: AsyncClient, candidate_headers):
+        resp = await client.get("/api/resumes", headers=candidate_headers)
         assert resp.status_code == 200
         assert resp.json() == []
 
     @pytest.mark.asyncio
     async def test_get_resume_by_id(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        candidate_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         create_resp = await client.post(
             "/api/resumes",
-            json={
-                "candidate_name": "Jane",
-                "content": "Full stack developer",
-            },
+            json={"candidate_name": "Jane", "content": "Full stack developer"},
+            headers=candidate_headers,
         )
         resume_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/resumes/{resume_id}")
+        resp = await client.get(
+            f"/api/resumes/{resume_id}", headers=candidate_headers
+        )
         assert resp.status_code == 200
         assert resp.json()["id"] == resume_id
 
     @pytest.mark.asyncio
-    async def test_get_resume_not_found(self, client: AsyncClient):
+    async def test_get_resume_not_found(
+        self, client: AsyncClient, candidate_headers
+    ):
         resp = await client.get(
-            "/api/resumes/00000000-0000-0000-0000-000000000000"
+            "/api/resumes/00000000-0000-0000-0000-000000000000",
+            headers=candidate_headers,
         )
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
     async def test_get_resume_matches_empty(
-        self, client: AsyncClient, mock_embedding_service, mock_skill_extraction
+        self,
+        client: AsyncClient,
+        candidate_headers,
+        mock_embedding_service,
+        mock_skill_extraction,
     ):
         create_resp = await client.post(
             "/api/resumes",
-            json={
-                "candidate_name": "Jane",
-                "content": "Engineer",
-            },
+            json={"candidate_name": "Jane", "content": "Engineer"},
+            headers=candidate_headers,
         )
         resume_id = create_resp.json()["id"]
 
-        resp = await client.get(f"/api/resumes/{resume_id}/matches")
+        resp = await client.get(
+            f"/api/resumes/{resume_id}/matches", headers=candidate_headers
+        )
         assert resp.status_code == 200
         assert resp.json() == []
 
 
 class TestMatchesAPI:
     @pytest.mark.asyncio
-    async def test_compute_matches_no_ids(self, client: AsyncClient):
-        resp = await client.post("/api/matches/compute", json={})
+    async def test_compute_matches_no_ids(
+        self, client: AsyncClient, candidate_headers
+    ):
+        resp = await client.post(
+            "/api/matches/compute", json={}, headers=candidate_headers
+        )
         assert resp.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_compute_matches_job_not_found(self, client: AsyncClient):
+    async def test_compute_matches_job_not_found(
+        self, client: AsyncClient, recruiter_headers
+    ):
         resp = await client.post(
             "/api/matches/compute",
             json={"job_id": "00000000-0000-0000-0000-000000000000"},
+            headers=recruiter_headers,
         )
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_matches_empty(self, client: AsyncClient):
-        resp = await client.get("/api/matches")
+    async def test_list_matches_empty(
+        self, client: AsyncClient, candidate_headers
+    ):
+        resp = await client.get("/api/matches", headers=candidate_headers)
         assert resp.status_code == 200
         assert resp.json() == []

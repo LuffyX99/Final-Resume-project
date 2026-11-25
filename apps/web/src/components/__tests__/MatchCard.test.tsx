@@ -10,6 +10,7 @@ const baseMatch: Match = {
   resume_id: "resume-1",
   similarity_score: 0.85,
   bias_reduced: false,
+  shortlisted: false,
   created_at: "2024-01-01T00:00:00Z",
   job_title: "Software Engineer",
   job_company: "Acme Corp",
@@ -58,5 +59,26 @@ describe("MatchCard", () => {
     const match = { ...baseMatch, job_title: undefined };
     renderWithRouter(<MatchCard match={match} mode="resume" />);
     expect(screen.getByText("Unknown Job")).toBeInTheDocument();
+  });
+
+  it("uses an explicit score override", () => {
+    renderWithRouter(
+      <MatchCard match={baseMatch} mode="job" score={0.42} />,
+    );
+    expect(screen.getByText("42%")).toBeInTheDocument();
+  });
+
+  it("can render a non-clickable summary", () => {
+    renderWithRouter(
+      <MatchCard
+        match={baseMatch}
+        mode="job"
+        to={null}
+        subtitle="Backend Engineer · Acme"
+      />,
+    );
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.getByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("Backend Engineer · Acme")).toBeInTheDocument();
   });
 });

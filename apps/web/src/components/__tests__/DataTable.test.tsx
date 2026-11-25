@@ -133,4 +133,39 @@ describe("DataTable", () => {
     );
     expect(screen.getByText(/page 2/)).toBeInTheDocument();
   });
+
+  it("can hide pagination when all rows are already shown", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={sampleData}
+        keyExtractor={(i) => i.id}
+        page={0}
+        onPageChange={() => {}}
+        hasMore={false}
+        showPagination={false}
+      />,
+    );
+    expect(screen.queryByText(/page 1/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+  });
+
+  it("applies a custom cell class for wrapping content", () => {
+    render(
+      <DataTable
+        columns={[
+          { ...columns[0], cellClassName: "whitespace-normal min-w-[200px]" },
+        ]}
+        data={sampleData}
+        keyExtractor={(i) => i.id}
+        page={0}
+        onPageChange={() => {}}
+        hasMore={false}
+      />,
+    );
+    expect(screen.getByText("Alice").closest("td")).toHaveClass(
+      "whitespace-normal",
+      "min-w-[200px]",
+    );
+  });
 });

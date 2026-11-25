@@ -176,6 +176,17 @@ textarea::placeholder {
   color: var(--color-base-400) !important;
 }
 
+/* Tag input: the global input styles must not draw a second box inside the
+   tag container. */
+.skill-tag-input,
+.skill-tag-input:focus {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 /* ─── Utility ─── */
 .text-gradient {
   background: linear-gradient(135deg, var(--color-neon) 0%, var(--color-violet-accent) 100%);

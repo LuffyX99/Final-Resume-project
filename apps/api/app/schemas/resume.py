@@ -15,6 +15,7 @@ class ResumeResponse(BaseModel):
     content: str
     skills: list[str] | None = None
     file_name: str | None = None
+    candidate_id: UUID | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

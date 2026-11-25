@@ -1,22 +1,40 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { getJobs } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import type { Job } from "../types";
 import DataTable from "../components/DataTable";
 
 const PAGE_SIZE = 20;
 
 export default function JobsList() {
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const canCreate = user?.role !== "candidate";
+
   useEffect(() => {
-    setLoading(true);
+    let active = true;
     getJobs(page * PAGE_SIZE, PAGE_SIZE)
-      .then(setJobs)
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (active) setJobs(data);
+      })
+      .catch(() => {
+        if (active) setJobs([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [page]);
+
+  if (user?.role === "candidate") {
+    return <Navigate to="/candidate" replace />;
+  }
 
   if (loading && page === 0) {
     return (
@@ -32,16 +50,22 @@ export default function JobsList() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold text-base-50 tracking-tight">
-            Jobs
+            {canCreate ? "Jobs" : "Open Jobs"}
           </h1>
-          <p className="mt-1 text-base-300">Manage your job postings</p>
+          <p className="mt-1 text-base-300">
+            {canCreate
+              ? "Manage your job postings"
+              : "Browse roles matched to your profile"}
+          </p>
         </div>
-        <Link
-          to="/jobs/new"
-          className="rounded-lg bg-neon px-5 py-2.5 text-sm font-semibold text-base-950 hover:bg-neon-dim transition-all duration-200 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
-        >
-          Add Job
-        </Link>
+        {canCreate && (
+          <Link
+            to="/jobs/new"
+            className="rounded-lg bg-neon px-5 py-2.5 text-sm font-semibold text-base-950 hover:bg-neon-dim transition-all duration-200 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+          >
+            Add Job
+          </Link>
+        )}
       </div>
 
       <DataTable
@@ -78,7 +102,10 @@ export default function JobsList() {
         data={jobs}
         keyExtractor={(job) => job.id}
         page={page}
-        onPageChange={setPage}
+        onPageChange={(next) => {
+          setLoading(true);
+          setPage(next);
+        }}
         hasMore={jobs.length === PAGE_SIZE}
       />
     </div>
