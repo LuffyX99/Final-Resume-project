@@ -16,8 +16,6 @@ import { useLiveResource } from "../hooks/useLiveResource";
 import { useRealtimeSync } from "../hooks/useRealtimeSync";
 import {
   rankApplicants,
-  SIMILARITY_WEIGHT,
-  TRUST_WEIGHT,
   type RankedApplicant,
 } from "../lib/matchInsight";
 import type { Match } from "../types";
@@ -214,10 +212,7 @@ export default function JobApplicants() {
       </div>
 
       <p className="mt-4 max-w-3xl text-xs leading-relaxed text-base-400">
-        Final Score = {Math.round(SIMILARITY_WEIGHT * 100)}% semantic
-        similarity + {Math.round(TRUST_WEIGHT * 100)}% skill trust. Trust is the
-        share of the job&apos;s required skills evidenced in the candidate
-        profile; when a job lists no skills, it mirrors similarity.
+        Final Score = Semantic Similarity × Skill Trust. Trust is evaluated via anti-cheating inspection and required skill evidence; when a job lists no skills, it mirrors similarity.
       </p>
 
       {error && (

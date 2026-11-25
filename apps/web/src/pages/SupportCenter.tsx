@@ -9,12 +9,14 @@ import {
   errorMessage,
 } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useAdminAuth } from "../auth/AdminAuthContext";
 import { useRealtimeSync } from "../hooks/useRealtimeSync";
 import type { SupportThread } from "../types";
 
 export default function SupportCenter() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const { admin } = useAdminAuth();
+  const isAdmin = user?.role === "admin" || Boolean(admin);
 
   const [threads, setThreads] = useState<SupportThread[]>([]);
   const [total, setTotal] = useState(0);

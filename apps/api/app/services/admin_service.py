@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.models import (
     Application,
     Job,
@@ -36,6 +37,63 @@ from app.services.events import event_dispatcher
 
 
 class AdminService:
+    @staticmethod
+    async def resolve_admin_user(db: AsyncSession) -> User:
+        """Return the database row that backs the environment admin identity.
+
+        Admin login is credential-based (``ADMIN_ID`` / ``ADMIN_EMAIL`` /
+        ``ADMIN_PASSWORD``), but every ownership check, support message and
+        notification still needs a real ``users`` row. This helper finds that
+        row, or creates it once, so admin tokens and user tokens agree on one
+        identity model.
+        """
+        email = (settings.admin_email or "").strip().lower()
+
+        lookup = select(User).where(User.role == "admin")
+        if email:
+            lookup = lookup.where(func.lower(User.email) == email)
+        lookup = lookup.order_by(User.created_at.asc()).limit(1)
+        admin_user = (await db.execute(lookup)).scalars().first()
+
+        if admin_user is None and email:
+            # A stale/deactivated row with the configured address still owns
+            # the unique index, so reuse it rather than colliding.
+            admin_user = (
+                await db.execute(
+                    select(User).where(func.lower(User.email) == email)
+                )
+            ).scalars().first()
+
+        if admin_user is None:
+            admin_user = (
+                await db.execute(
+                    select(User)
+                    .where(User.role == "admin")
+                    .order_by(User.created_at.asc())
+                    .limit(1)
+                )
+            ).scalars().first()
+
+        if admin_user is None:
+            admin_user = User(
+                role="admin",
+                full_name=settings.admin_full_name,
+                email=email or f"{settings.admin_id or 'admin'}@resumematch.local",
+                password_hash=hash_password(settings.admin_password),
+                is_active=True,
+            )
+            db.add(admin_user)
+            await db.commit()
+            await db.refresh(admin_user)
+            return admin_user
+
+        if not admin_user.is_active:
+            admin_user.is_active = True
+            await db.commit()
+            await db.refresh(admin_user)
+
+        return admin_user
+
     @staticmethod
     async def get_metrics(db: AsyncSession) -> AdminMetricsResponse:
         # Total Candidates

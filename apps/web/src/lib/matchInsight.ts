@@ -11,6 +11,9 @@ import type { Job, LearningStep, Match } from "../types";
  * profile (falling back to semantic similarity when the job has no skills).
  * Final = weighted blend of semantic similarity and trust.
  */
+// Must stay in sync with `similarity_weight` / `trust_weight` in
+// apps/api/app/config.py. The API is authoritative; these values are only the
+// offline fallback used when a match payload carries no final_score.
 export const SIMILARITY_WEIGHT = 0.65;
 export const TRUST_WEIGHT = 0.35;
 
@@ -123,7 +126,9 @@ export function deriveMatchInsight(match: Match, job: JobSkills): MatchInsight {
       : clamp01(skillCoverage);
 
   const blendedScore =
-    SIMILARITY_WEIGHT * similarityScore + TRUST_WEIGHT * trustScore;
+    requiredSkills.length > 0
+      ? SIMILARITY_WEIGHT * similarityScore + TRUST_WEIGHT * trustScore
+      : similarityScore;
   const finalScore =
     match.final_score != null
       ? clamp01(match.final_score)

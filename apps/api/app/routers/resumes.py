@@ -1,12 +1,13 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps import ensure_resume_access, get_current_user, require_role
 from app.models import Job, Match, Resume, User
+from app.ratelimit import limiter
 from app.schemas import MatchResponse, ResumeCreate, ResumeResponse
 from app.services.embedding import EmbeddingService
 from app.services.resume_upload import ResumeUploadError, read_resume_upload
@@ -19,7 +20,9 @@ skill_service = SkillExtractionService()
 
 
 @router.post("", response_model=ResumeResponse, status_code=201)
+@limiter.limit("30/minute")
 async def create_resume(
+    request: Request,
     body: ResumeCreate,
     user: User = Depends(require_role("candidate", "recruiter", "admin")),
     db: AsyncSession = Depends(get_db),
@@ -40,7 +43,9 @@ async def create_resume(
 
 
 @router.post("/upload", response_model=ResumeResponse, status_code=201)
+@limiter.limit("10/minute")
 async def upload_resume(
+    request: Request,
     candidate_name: str = Form(...),
     file: UploadFile = File(...),
     user: User = Depends(require_role("candidate", "recruiter", "admin")),

@@ -5,3 +5,18 @@ node_modules/
 dist/
 .vite/
 .claude/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local run artifacts
+*.log
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+tmp*/
+pip-*/

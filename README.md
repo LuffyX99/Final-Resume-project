@@ -12,20 +12,23 @@ An AI-powered platform that matches job candidates to job postings using vector 
 
 ## Features
 
-- **Vector-based matching** — Converts resumes and job descriptions into embeddings and computes cosine similarity
-- **Skill extraction** — Automatically extracts and normalizes skills using GPT
-- **Bias-reduced ranking** — Optional PII stripping for fairer matching
-- **File upload** — Supports PDF and DOCX resume uploads
-- **Recruiter dashboard** — Web interface for managing jobs, resumes, and viewing match results
+- **SBERT Semantic Matching** — 384-dimensional dense vector embeddings (`all-MiniLM-L6-v2`) with cosine similarity and FAISS vector indexing
+- **Anti-Cheating Trust Scoring** — Detects hidden white text, tiny fonts, off-page text, keyword stuffing, and verbatim JD injection
+- **Skill Gap & Readiness Analysis** — Classifies skills into Matched, Missing, and Stale (recency checking ≥ 3 years and legacy mapping) with Readiness Score (0-100%)
+- **Multiplicative Scoring** — Computes `Final Score = Similarity × Trust` for rigorous fraud-penalized applicant ranking
+- **Candidate & Recruiter Dashboards** — Real-time candidate application tracker, skill gap analysis modal, and recruiter ranking view with live Server-Sent Events (SSE)
+- **Document Parsing** — PyMuPDF (PDF) and python-docx (DOCX) text extraction
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
-| Backend | Python 3.12, FastAPI, SQLAlchemy (async) |
-| Database | PostgreSQL 16 + pgvector |
-| AI/ML | OpenAI `text-embedding-3-small`, `gpt-4o-mini` |
+| Backend | Python 3.12, FastAPI, SQLAlchemy (async), Pydantic v2 |
+| Vector Search | SBERT `all-MiniLM-L6-v2`, FAISS vector index, pgvector |
+| Database | PostgreSQL 16 + pgvector / MongoDB document schema layer |
+| Trust & Integrity | Hidden text detection (PyMuPDF/docx), keyword stuffing analysis |
+| Real-time | Server-Sent Events (SSE) event bus |
 | Infrastructure | Docker, Docker Compose |
 
 ## Prerequisites

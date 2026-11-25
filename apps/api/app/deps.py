@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Union
+from typing import Any
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -12,15 +12,6 @@ from app.models import Job, Resume, User
 from app.security import decode_access_token
 
 _bearer = HTTPBearer(auto_error=False)
-
-
-class AdminPrincipal:
-    def __init__(self, admin_id: str):
-        self.id = admin_id
-        self.role = "admin"
-        self.full_name = getattr(settings, "admin_full_name", "Platform Administrator")
-        self.email = getattr(settings, "admin_email", "admin@resumematch.ai")
-        self.is_active = True
 
 
 def _unauthorized(detail: str = "Not authenticated") -> HTTPException:
@@ -55,10 +46,17 @@ async def get_current_user(
     return user
 
 
+async def _resolve_admin(db: AsyncSession) -> User:
+    # Imported lazily: admin_service pulls in the whole model/schema graph.
+    from app.services.admin_service import AdminService
+
+    return await AdminService.resolve_admin_user(db)
+
+
 async def get_current_admin(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: AsyncSession = Depends(get_db),
-) -> Union[AdminPrincipal, User]:
+) -> User:
     if credentials is None:
         raise _unauthorized("Admin authentication required")
 
@@ -75,19 +73,38 @@ async def get_current_admin(
 
     sub = str(payload.get("sub", ""))
     if sub.startswith("admin:") or sub == "admin" or payload.get("is_admin") is True:
-        admin_id = payload.get("admin_id") or sub.removeprefix("admin:")
-        return AdminPrincipal(admin_id=admin_id)
+        # Environment-credential admins are mapped onto a real users row so
+        # ownership checks, support messages and notifications keep working.
+        return await _resolve_admin(db)
 
-    # Legacy database-backed admin compatibility
     try:
-        user_id = uuid.UUID(sub)
-        user = await db.get(User, user_id)
-        if user and user.role == "admin" and user.is_active:
-            return user
-    except Exception:
-        pass
+        user = await db.get(User, uuid.UUID(sub))
+    except (ValueError, TypeError):
+        raise _unauthorized("Invalid admin token")
 
-    return AdminPrincipal(admin_id=payload.get("admin_id", "admin"))
+    if user is None or user.role != "admin" or not user.is_active:
+        raise _unauthorized("Invalid admin token")
+
+    return user
+
+
+async def get_support_actor(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Accept either a user session or an admin session for helpdesk routes."""
+    if credentials is None:
+        raise _unauthorized()
+
+    try:
+        payload = decode_access_token(credentials.credentials)
+    except (jwt.InvalidTokenError, KeyError, TypeError, ValueError):
+        raise _unauthorized("Invalid or expired token")
+
+    if payload.get("role") == "admin" or payload.get("is_admin") is True:
+        return await _resolve_admin(db)
+
+    return await get_current_user(credentials, db)
 
 
 def require_role(*roles: str):

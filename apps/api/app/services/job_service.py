@@ -196,7 +196,10 @@ class JobService:
         skip: int = 0,
         limit: int = 20,
     ) -> list[Job]:
-        stmt = select(Job).where(Job.status == "open")
+        stmt = select(Job).where(
+            Job.status == "open",
+            Job.is_taken_down.is_(False),
+        )
 
         if search:
             term = f"%{search.strip()}%"

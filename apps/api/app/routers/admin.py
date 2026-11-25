@@ -1,12 +1,13 @@
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_admin
+from app.ratelimit import limiter
 from app.schemas.admin import (
     AdminApplicationsListResponse,
     AdminCandidateUpdate,
@@ -36,7 +37,12 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 @router.post("/login", response_model=AdminLoginResponse)
-async def admin_login(body: AdminLoginRequest):
+@limiter.limit("5/minute")
+async def admin_login(
+    request: Request,
+    body: AdminLoginRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """Authenticate platform administrator with fixed environment credentials."""
     ident = body.get_identifier()
     configured_id = (settings.admin_id or "").strip()
@@ -53,6 +59,10 @@ async def admin_login(body: AdminLoginRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid admin ID or password",
         )
+
+    # Guarantee the users row that backs this identity exists before handing
+    # out a token, so support/ownership checks have a stable UUID.
+    await AdminService.resolve_admin_user(db)
 
     token, expires_in = create_admin_token(configured_id or ident)
     return AdminLoginResponse(

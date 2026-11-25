@@ -75,9 +75,13 @@ export function clearStoredAdminToken(): void {
 api.interceptors.request.use((config) => {
   const url = String(config.url ?? "");
   const isAdminCall = url.startsWith("/admin") || url.includes("/admin/");
+  const userToken = getStoredToken();
+  const adminToken = getStoredAdminToken();
+  // Admin sessions have no user token, so fall back to the admin token for
+  // shared endpoints such as /support that both roles can call.
   const token = isAdminCall
-    ? getStoredAdminToken() || getStoredToken()
-    : getStoredToken();
+    ? adminToken || userToken
+    : userToken || adminToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

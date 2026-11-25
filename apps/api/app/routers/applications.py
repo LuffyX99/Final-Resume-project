@@ -7,6 +7,7 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
+    Request,
     UploadFile,
     status,
 )
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.deps import require_role
+from app.ratelimit import limiter
 from app.models import Application, Job, Match, Resume, User
 from app.schemas import (
     ApplicationResponse,
@@ -106,7 +108,9 @@ def _application_response(
     response_model=ApplicationResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit("20/minute")
 async def submit_application(
+    request: Request,
     job_id: uuid.UUID = Form(...),
     full_name: str = Form(..., min_length=2, max_length=255),
     phone_number: str = Form(..., max_length=32),
