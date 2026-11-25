@@ -34,6 +34,26 @@ async def lifespan(app: FastAPI):
     # Load SBERT model once at startup off the event loop
     logger.info("Initializing SBERT service at startup...")
     SBERTService.get_instance()
+
+    # Auto-initialize and seed SQLite database if running in fallback mode
+    from app.database import Base, engine
+    if "sqlite" in str(engine.url):
+        import app.models  # noqa: F401
+        from app.seeds.admin import seed_admin
+        from app.seeds.jobs import seed_jobs
+
+        logger.info("Initializing SQLite database tables and seed data...")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        try:
+            await seed_admin()
+        except Exception as exc:
+            logger.info("Admin seeding note: %s", exc)
+        try:
+            await seed_jobs()
+        except Exception as exc:
+            logger.info("Jobs seeding note: %s", exc)
+
     yield
 
 
