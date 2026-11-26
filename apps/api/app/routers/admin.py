@@ -67,7 +67,8 @@ async def admin_login(
     token, expires_in = create_admin_token(configured_id or ident)
     return AdminLoginResponse(
         access_token=token,
-        token_type="bearer",
+        # OAuth 2 requires a fixed token_type protocol value.
+        token_type="bearer",  # nosec B106
         expires_in=expires_in,
         admin={
             "id": configured_id or ident,

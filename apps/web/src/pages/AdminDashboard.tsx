@@ -290,6 +290,8 @@ export default function AdminDashboard() {
     loadRecruiters,
     loadJobs,
     loadShortlisted,
+    jobs.length,
+    recruiters.length,
   ]);
 
   useRealtimeSync({

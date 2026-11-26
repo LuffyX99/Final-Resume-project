@@ -317,8 +317,8 @@ class TestTrustScoringService:
         assert result.trust_score == 1.0
         assert result.flags == []
         assert result.similarity_score == 0.88
-        # Final = 0.70 * 0.88 + 0.30 * 1.00 = 0.616 + 0.300 = 0.916
-        expected_final = round(0.70 * 0.88 + 0.30 * 1.00, 4)
+        # PPT formula: Final = Similarity * Trust.
+        expected_final = round(0.88 * 1.00, 4)
         assert result.final_score == pytest.approx(expected_final, abs=1e-4)
         assert result.is_shortlisted is True  # 0.916 >= 0.85
 
@@ -363,7 +363,7 @@ class TestTrustScoringService:
             similarity_score=0.99,  # Artificially higher similarity!
         )
 
-        assert honest_res.final_score > 0.80
+        assert honest_res.final_score == pytest.approx(0.80, abs=1e-4)
         assert cheater_res.final_score == 0.0
         assert honest_res.final_score > cheater_res.final_score
 

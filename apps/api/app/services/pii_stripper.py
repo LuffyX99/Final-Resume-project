@@ -1,7 +1,7 @@
 import logging
 import re
 
-from openai import APIConnectionError, AsyncOpenAI
+from openai import AsyncOpenAI
 
 from app.config import settings
 
@@ -56,9 +56,10 @@ class PIIStripperService:
                 temperature=0,
             )
             return response.choices[0].message.content or text
-        except APIConnectionError:
+        except Exception as exc:
             logger.warning(
-                "OpenAI PII cleanup is unreachable; using local redaction."
+                "OpenAI PII cleanup failed (%s); using local redaction.",
+                type(exc).__name__,
             )
             return self._local_strip(text)
 

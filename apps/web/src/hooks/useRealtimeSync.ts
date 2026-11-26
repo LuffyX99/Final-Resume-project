@@ -29,7 +29,7 @@ function getSafeToken(): string | null {
   return null;
 }
 
-export interface RealtimeEvent<T = any> {
+export interface RealtimeEvent<T = Record<string, unknown>> {
   event: string;
   data: T;
   timestamp: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   getSupportThreads,
@@ -41,7 +41,7 @@ export default function SupportCenter() {
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  async function loadThreads(filter = statusFilter) {
+  const loadThreads = useCallback(async (filter = statusFilter) => {
     try {
       setLoading(true);
       setError(null);
@@ -58,11 +58,11 @@ export default function SupportCenter() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter, search]);
 
   useEffect(() => {
-    loadThreads(statusFilter);
-  }, [statusFilter]);
+    void loadThreads(statusFilter);
+  }, [loadThreads, statusFilter]);
 
   useRealtimeSync({
     events: [

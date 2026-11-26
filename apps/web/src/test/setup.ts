@@ -27,9 +27,10 @@ class MockEventSource {
   close() {}
 }
 
-if (typeof window !== "undefined" && !window.EventSource) {
-  (window as any).EventSource = MockEventSource;
-}
-if (typeof globalThis !== "undefined" && !(globalThis as any).EventSource) {
-  (globalThis as any).EventSource = MockEventSource;
+if (typeof globalThis !== "undefined" && !globalThis.EventSource) {
+  Object.defineProperty(globalThis, "EventSource", {
+    configurable: true,
+    writable: true,
+    value: MockEventSource,
+  });
 }

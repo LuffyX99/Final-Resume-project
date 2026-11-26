@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from typing import Literal
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,24 +26,29 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@db:5432/resume_matching"
     openai_api_key: str = ""
 
-    jwt_secret: str = "epti9FO8vX2OQduZUynzeQkwgB9R5l0Q8u_4RA7EZPCGuTnZhnKFSFgKCI0Mx72-"
+    # Secrets are required; never provide deployable credentials in source.
+    jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
     admin_id: str = "admin"
     admin_email: str = "admin.resumematch@gmail.com"
-    admin_password: str = "Admin#ResumeMatch2026"
+    admin_password: str
     admin_full_name: str = "Administrator"
 
     # Upload guard for candidate resumes (5 MiB by default).
     max_resume_bytes: int = 5 * 1024 * 1024
+
+    # SQLite fallback is an explicit local-development choice. It is disabled
+    # by default so database outages cannot silently divert production writes.
+    allow_sqlite_fallback: bool = False
 
     # Trust-weighted ranking & fraud detection configuration (supports "weighted" and "multiplicative")
     similarity_weight: float = 0.70
     trust_weight: float = 0.30
     min_trust_threshold: float = 0.30
     shortlist_threshold: float = 0.85
-    scoring_mode: str = "weighted"
+    scoring_mode: Literal["multiplicative", "weighted"] = "multiplicative"
 
     # Skill gap & readiness analysis configuration
     stale_skill_years_threshold: int = 3
@@ -77,6 +84,8 @@ class Settings(BaseSettings):
                 "default. Generate one with: python -c \"import secrets; "
                 "print(secrets.token_urlsafe(48))\""
             )
+        if self.jwt_secret.lower().startswith(("your-", "replace-with", "change-me")):
+            raise ValueError("JWT_SECRET must be replaced with a generated secret.")
         if (
             len(self.admin_password) < 12
             or self.admin_password in _WEAK_ADMIN_PASSWORDS
@@ -85,6 +94,8 @@ class Settings(BaseSettings):
                 "ADMIN_PASSWORD must be at least 12 characters and not a "
                 "published default."
             )
+        if self.admin_password.lower().startswith(("your-", "replace-with", "change-me")):
+            raise ValueError("ADMIN_PASSWORD must be replaced with a unique password.")
         return self
 
 

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -13,6 +14,8 @@ from app.schemas.support import (
     SupportThreadResponse,
 )
 from app.services.events import event_dispatcher
+
+logger = logging.getLogger(__name__)
 
 
 class SupportService:
@@ -65,8 +68,8 @@ class SupportService:
                     "category": thread.category,
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish support thread event: %s", exc)
 
         msg_resp = SupportMessageResponse(
             id=first_msg.id,
@@ -275,8 +278,8 @@ class SupportService:
                     },
                 )
                 db.add(notif)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Could not queue support reply notification: %s", exc)
 
         await db.commit()
         await db.refresh(msg)
@@ -294,8 +297,8 @@ class SupportService:
                     "content": msg.content,
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish support message event: %s", exc)
 
         return SupportMessageResponse(
             id=msg.id,
@@ -339,7 +342,7 @@ class SupportService:
                     "status": status,
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish support thread status event: %s", exc)
 
         return await SupportService.get_thread(db, user, thread.id)

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
-import os
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -84,8 +82,26 @@ class FAISSIndexService:
         """Train index for IVF indices."""
         arr = np.asarray(vectors, dtype=np.float32)
         if self._native_index is not None and not self._is_trained:
+            if arr.ndim != 2 or arr.shape[1] != self.dimension or len(arr) < self.nlist:
+                raise ValueError(
+                    f"IVF index requires at least {self.nlist} training vectors "
+                    f"with dimension {self.dimension}"
+                )
             self._native_index.train(arr)
         self._is_trained = True
+
+    def _rebuild_native_index(self) -> None:
+        """Recreate native state after replacing a labeled vector."""
+        self._native_index = None
+        self._is_trained = True
+        self._init_backend()
+        if self._native_index is None or not self._vectors:
+            return
+
+        matrix = np.vstack(self._vectors).astype(np.float32, copy=False)
+        if not self._is_trained:
+            self.train(matrix)
+        self._native_index.add(matrix)
 
     def add_vector(self, key: str, vector: Sequence[float] | np.ndarray) -> int:
         """Add a single labeled embedding vector to the FAISS index."""
@@ -98,7 +114,13 @@ class FAISSIndexService:
         if key in self._key_to_id:
             idx = self._key_to_id[key]
             self._vectors[idx] = normalized
+            self._rebuild_native_index()
             return idx
+
+        if self._native_index is not None and not self._is_trained:
+            raise ValueError(
+                "IVF index must be trained with representative vectors before adding items"
+            )
 
         idx = len(self._id_to_key)
         self._id_to_key.append(key)
@@ -106,14 +128,14 @@ class FAISSIndexService:
         self._vectors.append(normalized)
 
         if self._native_index is not None:
-            if not self._is_trained:
-                self.train(np.array([normalized]))
             self._native_index.add(np.expand_dims(normalized, axis=0))
 
         return idx
 
     def add_vectors(self, keys: list[str], vectors: list[Sequence[float]] | np.ndarray) -> list[int]:
         """Batch add labeled embedding vectors."""
+        if len(keys) != len(vectors):
+            raise ValueError("keys and vectors must have the same length")
         ids: list[int] = []
         for k, v in zip(keys, vectors):
             ids.append(self.add_vector(k, v))
@@ -131,7 +153,14 @@ class FAISSIndexService:
         if not self._vectors:
             return []
 
+        if top_k < 1:
+            raise ValueError("top_k must be at least 1")
+
         q = self.normalize_vector(query_vector)
+        if len(q) != self.dimension:
+            raise ValueError(
+                f"Query dimension {len(q)} does not match index dimension {self.dimension}"
+            )
         k = min(top_k, len(self._vectors))
 
         if self._native_index is not None and self._native_index.ntotal > 0:
@@ -142,7 +171,10 @@ class FAISSIndexService:
             for rank, (dist, idx) in enumerate(zip(distances[0], indices[0])):
                 if idx < 0 or idx >= len(self._id_to_key):
                     continue
-                score = float(max(0.0, min(1.0, (dist + 1.0) / 2.0 if "L2" in self.index_type else dist)))
+                if "L2" in self.index_type:
+                    score = 1.0 / (1.0 + max(0.0, float(dist)))
+                else:
+                    score = float(max(0.0, min(1.0, dist)))
                 results.append({
                     "id": self._id_to_key[idx],
                     "score": round(score, 4),

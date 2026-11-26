@@ -44,7 +44,7 @@ class MockEventSource {
     if (this.onerror) this.onerror();
   }
 
-  triggerEvent(eventName: string, data: any) {
+  triggerEvent(eventName: string, data: unknown) {
     const event = new MessageEvent(eventName, {
       data: JSON.stringify(data),
     });
@@ -58,7 +58,11 @@ describe("useRealtimeSync hook", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     MockEventSource.instances = [];
-    (globalThis as any).EventSource = MockEventSource;
+    Object.defineProperty(globalThis, "EventSource", {
+      configurable: true,
+      writable: true,
+      value: MockEventSource,
+    });
 
     vi.spyOn(clientModule, "getStoredToken").mockReturnValue("test-jwt-token");
     vi.spyOn(authModule, "useAuth").mockReturnValue({

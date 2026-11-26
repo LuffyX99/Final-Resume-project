@@ -414,7 +414,7 @@ All protected endpoints require `Authorization: Bearer <token>` or `?token=<toke
 2. **Login:** Authenticates securely via Argon2id password hash and receives JWT token.
 3. **Job Posting:** Posts positions on `AddJob` with interactive tag-based required skills input. SBERT generates 384-d vectors automatically.
 4. **Pipeline Monitoring:** `RecruiterHome` tracks live applicant and shortlisted counts.
-5. **Ranked Matching:** Opens `JobApplicants` to view candidates ranked by trust-weighted score ($S_{\text{sim}} \times 0.70 + S_{\text{trust}} \times 0.30$), with color-coded score pills and trust badges.
+5. **Ranked Matching:** Opens `JobApplicants` to view candidates ranked by the multiplicative score ($S_{\text{sim}} \times S_{\text{trust}}$), with color-coded score pills and trust badges.
 6. **Decision & Audit:** Inspects skill alignments and manually overrides shortlist status with logged justification.
 7. **Shortlist Outreach:** Dispatches interview invitations via `InterviewInviteModal`, writing in-app notifications and sending background SMTP emails.
 
@@ -431,10 +431,11 @@ All protected endpoints require `Authorization: Bearer <token>` or `?token=<toke
 ### Backend (`apps/api/.env`)
 ```env
 # Database Connection (PostgreSQL 16 + pgvector)
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/resume_matching
+DATABASE_URL=postgresql+asyncpg://postgres:generate-a-unique-local-password@localhost:5432/resume_matching
 
 # Authentication & Security
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
+# Generate a unique value; the application refuses to start while this is empty.
+JWT_SECRET=
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=1440
 
@@ -443,7 +444,8 @@ OPENAI_API_KEY=
 
 # Admin Bootstrap (Default Platform Administrator)
 ADMIN_EMAIL=admin.resumematch@gmail.com
-ADMIN_PASSWORD=Admin#ResumeMatch2026
+# Set a unique password; the application refuses to start while this is empty.
+ADMIN_PASSWORD=
 ADMIN_FULL_NAME=Platform Admin
 
 # File Upload Guardrails
@@ -496,13 +498,13 @@ cd apps/api
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[test]"
 alembic upgrade head
-python -m app.seeds.admin        # Bootstraps admin user (admin.resumematch@gmail.com / Admin#ResumeMatch2026)
+python -m app.seeds.admin        # Bootstraps the administrator configured in apps/api/.env
 python -m app.seeds.jobs         # Seeds 10 sample realistic job postings
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 # 3. Setup & Run Frontend (separate terminal)
 cd apps/web
-npm install
+npm ci
 npm run dev
 ```
 

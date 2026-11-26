@@ -197,10 +197,8 @@ async def get_application_readiness(
                 resume_text=resume.content,
                 similarity_score=application.similarity_score or 0.0,
             )
-            application.readiness_score = gap.readiness_score
-            application.skill_gap_analysis = gap.to_dict()
-            await db.commit()
-            analysis_dict = application.skill_gap_analysis
+            # This is a GET endpoint: return a derived view without persisting it.
+            analysis_dict = gap.to_dict()
 
     if not analysis_dict:
         return SkillGapResponse()

@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from openai import APIConnectionError, AsyncOpenAI
+from openai import AsyncOpenAI
 
 from app.config import settings
 
@@ -79,9 +79,10 @@ class SkillExtractionService:
             data = json.loads(content)
             skills = data.get("skills", [])
             return [skill for skill in skills if isinstance(skill, str)][:30]
-        except APIConnectionError:
+        except Exception as exc:
             logger.warning(
-                "OpenAI skill extraction is unreachable; using local skill matching."
+                "OpenAI skill extraction failed (%s); using local skill matching.",
+                type(exc).__name__,
             )
             return self._local_extract(text)
 

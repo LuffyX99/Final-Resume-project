@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import Any
 
@@ -33,6 +34,8 @@ from app.schemas.admin import (
     AdminUsersListResponse,
 )
 from app.security import hash_password, normalize_phone
+
+logger = logging.getLogger(__name__)
 from app.services.events import event_dispatcher
 
 
@@ -336,8 +339,8 @@ class AdminService:
                     "is_active": is_active,
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish admin user status event: %s", exc)
 
         return await AdminService.get_user_detail(db, user_id)
 
@@ -447,8 +450,8 @@ class AdminService:
                     "status": "closed",
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish job takedown event: %s", exc)
 
         recruiter_name = None
         recruiter_email = None

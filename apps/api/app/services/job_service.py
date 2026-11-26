@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -10,6 +11,8 @@ from app.schemas.job import JobCreate, JobUpdate
 from app.services.embedding import EmbeddingService
 from app.services.events import event_dispatcher
 from app.services.skill_extraction import SkillExtractionService
+
+logger = logging.getLogger(__name__)
 
 
 def merge_skills(
@@ -111,8 +114,8 @@ class JobService:
                     "recruiter_id": str(user.id),
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish job created event: %s", exc)
         return job
 
     async def get_job(
@@ -298,8 +301,8 @@ class JobService:
                     "recruiter_id": str(user.id),
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish job updated event: %s", exc)
         return await self.get_job(db, job.id) or job
 
     async def close_job(
@@ -324,8 +327,8 @@ class JobService:
                     "recruiter_id": str(user.id),
                 },
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Could not publish job closed event: %s", exc)
         return await self.get_job(db, job.id) or job
 
     async def delete_job(

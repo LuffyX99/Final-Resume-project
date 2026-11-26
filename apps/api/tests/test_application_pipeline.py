@@ -196,7 +196,10 @@ class TestApplicationPipeline:
 
         # 3. Stage 3 & 4: Trust, Final Score, and Skill Gap
         assert result.application.trust_score >= 0.90
-        assert result.application.final_score > 0.70
+        assert result.application.final_score == pytest.approx(
+            result.application.similarity_score * result.application.trust_score,
+            abs=1e-4,
+        )
         assert result.application.readiness_score > 70
         assert result.application.skill_gap_analysis is not None
         assert "Python" in result.application.skill_gap_analysis["matched_skills"]

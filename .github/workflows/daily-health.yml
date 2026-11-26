@@ -1,0 +1,71 @@
+name: Daily health check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: resume_matching
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d resume_matching"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/resume_matching
+      JWT_SECRET: resume-matching-ci-only-jwt-secret-00000000000000000000000000000000
+      ADMIN_PASSWORD: CI-only-admin-password-42!
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      TOKENIZERS_PARALLELISM: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: python -m pip install -e ".[test]"
+
+      - name: Apply database migrations
+        working-directory: apps/api
+        run: python -m alembic upgrade head
+
+      - name: Start API and run daily checks
+        run: |
+          python -m uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8000 > /tmp/resume-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/health; then
+              break
+            fi
+            sleep 2
+          done
+          if ! kill -0 "$api_pid" 2>/dev/null; then
+            cat /tmp/resume-api.log
+            exit 1
+          fi
+          API_HEALTH_URL=http://127.0.0.1:8000/health bash scripts/daily_health_check.sh
