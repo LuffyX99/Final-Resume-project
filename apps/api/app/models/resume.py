@@ -21,7 +21,9 @@ class Resume(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        # This column is TIMESTAMP WITHOUT TIME ZONE; keep the stored value UTC
+        # but naive so asyncpg can bind it without a timezone mismatch.
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     candidate: Mapped["User | None"] = relationship(  # noqa: F821

@@ -23,7 +23,7 @@ class Match(Base):
     bias_reduced: Mapped[bool] = mapped_column(Boolean, default=False)
     shortlisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     job: Mapped["Job"] = relationship(back_populates="matches")  # noqa: F821
